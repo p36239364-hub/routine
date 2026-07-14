@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<title>Life Dashboard</title>
+<link rel="icon" href="data:,">
+<style>
+/* ============================================================
+   Life Dashboard — Design Tokens
+   Palette: 미니멀 뉴트럴 배경 + 인디고-바이올렛 액센트
+   Type: 시스템 폰트 스택 (Apple 네이티브 느낌, 한글은 Pretendard 폴백)
+   ============================================================ */
+:root{
+  --accent-h: 243;
+  --accent: hsl(var(--accent-h) 75% 62%);
+  --accent-strong: hsl(var(--accent-h) 70% 54%);
+  --accent-soft: hsl(var(--accent-h) 85% 96%);
+  --accent-shadow: hsla(var(--accent-h), 75%, 55%, 0.32);
+
+  --bg: #F6F6F9;
+  --bg-elevated: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #F0F0F4;
+  --border: rgba(60,60,67,0.10);
+  --border-strong: rgba(60,60,67,0.16);
+
+  --text: #1C1C1E;
+  --text-secondary: #6E6E76;
+  --text-tertiary: #A0A0A8;
+
+  --red: #FF6B6B;
+  --yellow: #F5A623;
+  --green: #46B884;
+
+  --shadow-sm: 0 1px 2px rgba(20,20,30,0.04), 0 1px 1px rgba(20,20,30,0.03);
+  --shadow-md: 0 8px 24px rgba(20,20,30,0.08), 0 2px 6px rgba(20,20,30,0.04);
+  --shadow-lg: 0 20px 48px rgba(20,20,30,0.14), 0 6px 16px rgba(20,20,30,0.06);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-full: 999px;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+
+  color-scheme: light;
+}
+
+html[data-theme="dark"]{
+  --bg: #131316;
+  --bg-elevated: #1C1C20;
+  --surface: #1E1E23;
+  --surface-2: #26262C;
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
+
+  --text: #F2F2F5;
+  --text-secondary: #9C9CA5;
+  --text-tertiary: #6C6C74;
+
+  --accent: hsl(var(--accent-h) 85% 70%);
+  --accent-strong: hsl(var(--accent-h) 80% 62%);
+  --accent-soft: hsla(var(--accent-h), 60%, 40%, 0.18);
+  --accent-shadow: hsla(var(--accent-h), 80%, 62%, 0.38);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+
+*{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+button, input, textarea, select{ font-family: inherit; color: inherit; }
+button{ cursor:pointer; }
+h1,h2,h3,p{ margin:0; }
+ul{ list-style:none; margin:0; padding:0; }
+a{ color:inherit; text-decoration:none; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- Layout shell ---------- */
+#app{
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display:flex;
+  flex-direction:column;
+  position: relative;
+}
+@media (min-width: 720px){
+  #app{ max-width: 680px; }
+}
+
+.view{
+  flex:1;
+  padding: calc(20px + var(--safe-top)) 20px 100px;
+  animation: viewIn 0.32s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes viewIn{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+.view[hidden]{ display:none; }
+
+/* ---------- Top header ---------- */
+.top-clock{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom: 18px;
+}
+.top-clock .date-block .weekday{
+  font-size: 15px; color: var(--accent-strong); font-weight:700; letter-spacing:0.2px;
+}
+.top-clock .date-block .date{
+  font-size: 28px; font-weight:800; font-family: var(--font-display); letter-spacing:-0.5px; margin-top:2px;
+}
+.top-clock .time{
+  font-size: 22px; font-weight:600; color: var(--text-secondary); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Progress ring (signature element) ---------- */
+.ring-card{
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 22px;
+  display:flex; align-items:center; gap:20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+}
+.ring-wrap{ position:relative; width:88px; height:88px; flex-shrink:0; }
+.ring-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
+.ring-track{ fill:none; stroke: var(--surface-2); stroke-width:9; }
+.ring-progress{
+  fill:none; stroke: url(#ringGradient); stroke-width:9; stroke-linecap: round;
+  stroke-dasharray: 251.2; stroke-dashoffset: 251.2;
+  transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1);
+}
+.ring-percent{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:19px; font-weight:800; font-family: var(--font-display);
+}
+.ring-info .ring-title{ font-size:15px; font-weight:700; margin-bottom:4px; }
+.ring-info .ring-sub{ font-size:13px; color: var(--text-secondary); }
+.streak-chip{
+  display:inline-flex; align-items:center; gap:4px; margin-top:8px;
+  background: var(--accent-soft); color: var(--accent-strong);
+  padding: 4px 10px; border-radius: var(--radius-full); font-size:12px; font-weight:700;
+}
+
+/* ---------- Section ---------- */
+.section{ margin-bottom: 26px; }
+.section-head{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 10px;
+}
+.section-head h2{ font-size:17px; font-weight:800; }
+.section-head .link-btn{
+  font-size:13px; color: var(--accent-strong); font-weight:600; background:none; border:none; padding:4px;
+}
+.empty-state{
+  text-align:center; padding: 28px 16px; color: var(--text-tertiary); font-size:13px;
+  background: var(--surface); border-radius: var(--radius-md); border:1px dashed var(--border-strong);
+}
+
+/* ---------- Cards / list items ---------- */
+.card{
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.list{ display:flex; flex-direction:column; gap:8px; }
+
+.item-row{
+  display:flex; align-items:center; gap:12px;
+  padding: 13px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, opacity 0.28s ease, box-shadow 0.18s ease;
+}
+.item-row:active{ transform: scale(0.98); }
+.item-row.completing{ animation: completePulse 0.42s ease; }
+@keyframes completePulse{
+  0%{ transform: scale(1); }
+  35%{ transform: scale(0.965); }
+  100%{ transform: scale(1); }
+}
+.item-row.fading-out{ opacity:0; transform: translateX(14px) scale(0.97); }
+
+.checkbox{
+  width:24px; height:24px; border-radius:8px; flex-shrink:0;
+  border: 2px solid var(--border-strong);
+  display:flex; align-items:center; justify-content:center;
+  background: var(--surface);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.checkbox:active{ transform: scale(0.88); }
+.checkbox svg{ width:14px; height:14px; opacity:0; transform: scale(0.4); transition: all 0.22s cubic-bezier(.34,1.56,.64,1); }
+.checkbox.checked{ background: var(--accent); border-color: var(--accent); }
+.checkbox.checked svg{ opacity:1; transform: scale(1); }
+
+.item-main{ flex:1; min-width:0; }
+.item-title{ font-size:15px; font-weight:600; line-height:1.35; word-break:break-word; }
+.item-title.done{ color: var(--text-tertiary); text-decoration: line-through; }
+.item-meta{ font-size:12px; color: var(--text-tertiary); margin-top:2px; display:flex; gap:6px; align-items:center; }
+
+.priority-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.priority-high{ background: var(--red); }
+.priority-mid{ background: var(--yellow); }
+.priority-low{ background: var(--green); }
+
+.icon-btn{
+  width:32px; height:32px; border-radius:50%; border:none; background:transparent;
+  display:flex; align-items:center; justify-content:center; color: var(--text-tertiary);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.icon-btn:active{ transform: scale(0.88); background: var(--surface-2); }
+.icon-btn svg{ width:18px; height:18px; }
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding: 12px 18px; border-radius: var(--radius-full); border:none;
+  font-size:14px; font-weight:700;
+  background: var(--accent); color:#fff;
+  box-shadow: 0 6px 16px var(--accent-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity .15s ease;
+}
+.btn:active{ transform: scale(0.96); box-shadow: 0 3px 8px var(--accent-shadow); }
+.btn.secondary{ background: var(--surface-2); color: var(--text); box-shadow:none; }
+.btn.block{ width:100%; }
+.btn.danger{ background: var(--red); box-shadow:0 6px 16px rgba(255,107,107,0.32); }
+.btn:disabled{ opacity:0.45; }
+
+.fab{
+  position: fixed; right: 22px; bottom: calc(92px + var(--safe-bottom));
+  width:56px; height:56px; border-radius:50%; border:none;
+  background: var(--accent); color:#fff; box-shadow: var(--shadow-lg);
+  display:flex; align-items:center; justify-content:center; z-index:40;
+  transition: transform 0.15s ease;
+}
+.fab:active{ transform: scale(0.9); }
+.fab svg{ width:24px; height:24px; }
+@media (min-width:720px){ .fab{ right: calc(50% - 340px + 22px); } }
+
+/* ---------- Today progress bar (text style) ---------- */
+.bar-track{
+  height:8px; border-radius: var(--radius-full); background: var(--surface-2); overflow:hidden;
+}
+.bar-fill{
+  height:100%; border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  width:0%; transition: width 0.8s cubic-bezier(.2,.8,.2,1);
+}
+
+/* ---------- Filter tabs ---------- */
+.pill-tabs{ display:flex; gap:8px; margin-bottom:14px; overflow-x:auto; padding-bottom:2px; }
+.pill-tabs::-webkit-scrollbar{ display:none; }
+.pill-tab{
+  padding: 8px 14px; border-radius: var(--radius-full); border:1px solid var(--border);
+  background: var(--surface); font-size:13px; font-weight:600; color: var(--text-secondary); white-space:nowrap;
+  transition: all 0.18s ease;
+}
+.pill-tab.active{ background: var(--text); color: var(--bg); border-color: var(--text); }
+html[data-theme="dark"] .pill-tab.active{ background: var(--accent); border-color: var(--accent); color:#fff; }
+
+/* ---------- Bottom tab bar ---------- */
+.tabbar{
+  position: fixed; left:0; right:0; bottom:0; z-index:50;
+  display:flex; justify-content:center;
+}
+.tabbar-inner{
+  width:100%; max-width:560px;
+  display:flex; justify-content:space-around; align-items:center;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid var(--border);
+  padding: 8px 6px calc(8px + var(--safe-bottom));
+}
+html[data-theme="dark"] .tabbar-inner{ background: rgba(20,20,24,0.82); }
+@media (min-width:720px){ .tabbar-inner{ max-width:680px; } }
+
+.tab-btn{
+  background:none; border:none; flex:1;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding: 6px 2px; color: var(--text-tertiary);
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+.tab-btn:active{ transform: scale(0.92); }
+.tab-btn svg{ width:23px; height:23px; }
+.tab-btn span{ font-size:10.5px; font-weight:600; }
+.tab-btn.active{ color: var(--accent-strong); }
+
+/* ---------- Modal ---------- */
+.modal-overlay{
+  position: fixed; inset:0; background: rgba(10,10,14,0.42);
+  display:flex; align-items:flex-end; justify-content:center; z-index:100;
+  opacity:0; pointer-events:none; transition: opacity 0.25s ease;
+}
+.modal-overlay.open{ opacity:1; pointer-events:auto; }
+@media (min-width:720px){ .modal-overlay{ align-items:center; } }
+.modal-sheet{
+  background: var(--bg-elevated); width:100%; max-width:560px;
+  border-radius: 24px 24px 0 0; padding: 10px 20px calc(24px + var(--safe-bottom));
+  max-height: 88vh; overflow-y:auto;
+  transform: translateY(24px); transition: transform 0.3s cubic-bezier(.2,.8,.2,1);
+  box-shadow: var(--shadow-lg);
+}
+.modal-overlay.open .modal-sheet{ transform: translateY(0); }
+@media (min-width:720px){
+  .modal-sheet{ border-radius: 24px; max-height:82vh; }
+}
+.modal-handle{ width:36px; height:4px; border-radius:2px; background: var(--border-strong); margin: 6px auto 14px; }
+.modal-title{ font-size:19px; font-weight:800; margin-bottom:16px; }
+
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-size:12.5px; font-weight:700; color: var(--text-secondary); margin-bottom:6px; }
+.field input[type=text], .field input[type=date], .field input[type=time], .field input[type=number], .field textarea, .field select{
+  width:100%; padding:12px 13px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
+  font-size:15px; outline:none; transition: border-color 0.15s ease, background 0.15s ease;
+}
+.field input:focus, .field textarea:focus, .field select:focus{ border-color: var(--accent); background: var(--surface); }
+.field textarea{ resize:vertical; min-height:64px; }
+
+.segmented{ display:flex; background: var(--surface-2); border-radius: var(--radius-sm); padding:3px; gap:2px; }
+.segmented button{
+  flex:1; border:none; background:none; padding:9px 4px; border-radius:8px; font-size:13px; font-weight:700; color: var(--text-secondary);
+  transition: all 0.18s ease;
+}
+.segmented button.active{ background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+
+.weekday-picker{ display:flex; gap:6px; }
+.weekday-picker button{
+  flex:1; aspect-ratio:1; border-radius:50%; border:1px solid var(--border-strong); background: var(--surface-2);
+  font-size:13px; font-weight:700; color: var(--text-secondary); transition: all 0.18s ease;
+}
+.weekday-picker button.active{ background: var(--accent); border-color: var(--accent); color:#fff; }
+
+.modal-actions{ display:flex; gap:10px; margin-top:18px; }
+.modal-actions .btn{ flex:1; }
+
+/* ---------- Toast ---------- */
+.toast{
+  position: fixed; left:50%; bottom: calc(96px + var(--safe-bottom)); transform: translate(-50%, 10px);
+  background: rgba(28,28,30,0.92); color:#fff; padding:11px 18px; border-radius: var(--radius-full);
+  font-size:13px; font-weight:600; z-index:200; opacity:0; pointer-events:none;
+  transition: all 0.3s cubic-bezier(.2,.8,.2,1); box-shadow: var(--shadow-lg);
+}
+.toast.show{ opacity:1; transform: translate(-50%, 0); }
+
+/* ---------- Home: today schedule row ---------- */
+.event-row{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; }
+.event-time{ font-size:13px; font-weight:800; color: var(--accent-strong); width:48px; flex-shrink:0; font-variant-numeric:tabular-nums; padding-top:1px; }
+.event-title{ font-size:14.5px; font-weight:600; }
+.event-memo{ font-size:12px; color: var(--text-tertiary); margin-top:2px; }
+
+/* ---------- Calendar grid ---------- */
+.cal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cal-header h2{ font-size:18px; font-weight:800; }
+.cal-nav{ display:flex; gap:4px; }
+.cal-grid{ display:grid; grid-template-columns: repeat(7,1fr); gap:4px; margin-bottom:18px; }
+.cal-dow{ text-align:center; font-size:11px; font-weight:700; color: var(--text-tertiary); padding-bottom:6px; }
+.cal-cell{
+  aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:12px; font-size:13px; font-weight:600; position:relative; color: var(--text);
+  transition: background 0.15s ease;
+}
+.cal-cell.muted{ color: var(--text-tertiary); opacity:0.4; }
+.cal-cell.today{ box-shadow: inset 0 0 0 2px var(--accent); }
+.cal-cell.selected{ background: var(--accent); color:#fff; }
+.cal-dot{ width:4px; height:4px; border-radius:50%; background: var(--accent-strong); margin-top:2px; }
+.cal-cell.selected .cal-dot{ background:#fff; }
+
+/* ---------- Goal card ---------- */
+.goal-card{ padding:16px; display:flex; flex-direction:column; gap:8px; }
+.goal-top{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.goal-name{ font-size:15.5px; font-weight:700; }
+.goal-pct{ font-size:15px; font-weight:800; color: var(--accent-strong); flex-shrink:0; }
+.goal-period{ font-size:12px; color: var(--text-tertiary); font-weight:600; }
+.goal-note{ font-size:12.5px; color: var(--text-tertiary); }
+.goal-sub{ font-size:12px; color: var(--text-secondary); font-weight:600; }
+.goal-chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+.mini-chip{
+  font-size:11.5px; font-weight:600; color: var(--text-secondary);
+  background: var(--surface-2); padding:4px 9px; border-radius: var(--radius-full);
+}
+.goal-today-list{ margin-top:6px; padding-top:10px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px; }
+.goal-today-label{ font-size:11.5px; font-weight:800; color: var(--text-tertiary); text-transform:uppercase; letter-spacing:0.3px; }
+.goal-controls{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:2px; }
+.link-check-row{
+  display:flex; align-items:center; gap:8px; padding:10px 8px; font-size:14px; font-weight:600;
+  border-bottom:1px solid var(--border);
+}
+.link-check-row:last-child{ border-bottom:none; }
+.link-check-row input[type=checkbox]{ width:18px; height:18px; accent-color: var(--accent); flex-shrink:0; }
+.link-check-row .item-meta{ margin-left:auto; font-weight:600; }
+
+/* ---------- Settings ---------- */
+.settings-group{ margin-bottom:22px; }
+.settings-group h3{ font-size:12.5px; font-weight:800; color: var(--text-tertiary); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px; padding-left:4px; }
+.settings-row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 14px; background: var(--surface); border-bottom:1px solid var(--border);
+}
+.settings-row:first-child{ border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.settings-row:last-child{ border-radius: 0 0 var(--radius-md) var(--radius-md); border-bottom:none; }
+.settings-row:only-child{ border-radius: var(--radius-md); }
+.settings-label{ font-size:14.5px; font-weight:600; }
+.settings-desc{ font-size:12px; color: var(--text-tertiary); margin-top:2px; }
+
+.switch{ width:48px; height:28px; border-radius:14px; background: var(--surface-2); border:1px solid var(--border-strong); position:relative; flex-shrink:0; transition: background 0.2s ease; }
+.switch::after{ content:''; position:absolute; top:2px; left:2px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition: transform 0.22s cubic-bezier(.34,1.56,.64,1); }
+.switch.on{ background: var(--accent); border-color: var(--accent); }
+.switch.on::after{ transform: translateX(20px); }
+
+.color-swatches{ display:flex; gap:10px; padding: 12px 4px 4px; flex-wrap:wrap; }
+.swatch{ width:32px; height:32px; border-radius:50%; border:2px solid transparent; flex-shrink:0; transition: transform .15s ease; position:relative; }
+.swatch.active{ border-color: var(--text); transform: scale(1.08); }
+.swatch.active::after{ content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:800; }
+
+.custom-color-row{
+  display:flex; align-items:center; gap:12px;
+  padding: 12px 4px 14px; border-top: 1px solid var(--border); margin-top: 8px;
+}
+.custom-color-swatch{
+  width:36px; height:36px; border-radius:50%; flex-shrink:0; position:relative;
+  border:2px solid transparent; cursor:pointer; overflow:hidden;
+  background: conic-gradient(from 0deg, #FF6B6B, #F5A623, #E6E24A, #46B884, #4AC0E6, #5B5FEF, #B15BEF, #FF6B6B);
+  transition: transform .15s ease, border-color .15s ease;
+}
+.custom-color-swatch:active{ transform: scale(0.92); }
+.custom-color-swatch.active{ border-color: var(--text); }
+.custom-color-swatch::after{
+  content:''; position:absolute; inset:5px; border-radius:50%; background: var(--picked-color, #fff);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+.custom-color-swatch input[type=color]{
+  position:absolute; inset:0; width:100%; height:100%; opacity:0; border:none; padding:0; cursor:pointer;
+}
+.custom-color-text{ flex:1; }
+
+.stat-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; }
+.stat-box{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius-md); padding:14px 8px; text-align:center; box-shadow: var(--shadow-sm); }
+.stat-box .num{ font-size:20px; font-weight:800; font-family: var(--font-display); }
+.stat-box .lbl{ font-size:11px; color: var(--text-tertiary); margin-top:4px; font-weight:600; }
+
+.app-title-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.app-title-row h1{ font-size:22px; font-weight:800; font-family: var(--font-display); }
+
+input[type=file]{ display:none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ HOME ============ -->
+  <section class="view" id="view-home">
+    <div class="top-clock">
+      <div class="date-block">
+        <div class="weekday" id="home-weekday">-</div>
+        <div class="date" id="home-date">-</div>
+      </div>
+      <div class="time" id="home-time">--:--</div>
+    </div>
+
+    <div class="ring-card">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 90 90">
+          <defs>
+            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent)"/>
+              <stop offset="100%" stop-color="var(--accent-strong)"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="45" cy="45" r="40"/>
+          <circle class="ring-progress" id="home-ring" cx="45" cy="45" r="40"/>
+        </svg>
+        <div class="ring-percent" id="home-ring-pct">0%</div>
+      </div>
+      <div class="ring-info">
+        <div class="ring-title">오늘 진행률</div>
+        <div class="ring-sub" id="home-ring-sub">루틴 0/0 · 할 일 0/0</div>
+        <div class="streak-chip" id="home-streak">🔥 0일 연속</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>오늘의 루틴</h2>
+        <button class="link-btn" data-action="open-routine-manage">편집</button>
+      </div>
+      <div class="list" id="home-routine-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>오늘 할 일</h2>
+        <button class="link-btn" data-action="goto-todos">전체보기</button>
+      </div>
+      <div class="list" id="home-todo-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>오늘 일정</h2>
+        <button class="link-btn" data-action="goto-calendar">캘린더</button>
+      </div>
+      <div class="card list" id="home-event-list" style="padding:4px 0;"></div>
+    </div>
+  </section>
+
+  <!-- ============ TODOS ============ -->
+  <section class="view" id="view-todos" hidden>
+    <div class="app-title-row"><h1>할 일</h1></div>
+    <div class="pill-tabs" id="todo-filter-tabs">
+      <button class="pill-tab active" data-filter="all">전체</button>
+      <button class="pill-tab" data-filter="active">진행중</button>
+      <button class="pill-tab" data-filter="done">완료</button>
+    </div>
+    <div class="list" id="todo-list"></div>
+  </section>
+
+  <!-- ============ CALENDAR ============ -->
+  <section class="view" id="view-calendar" hidden>
+    <div class="app-title-row"><h1>일정</h1></div>
+    <div class="cal-header">
+      <button class="icon-btn" data-action="cal-prev">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h2 id="cal-month-label">-</h2>
+      <button class="icon-btn" data-action="cal-next">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid" id="cal-dow-row"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="section-head"><h2 id="cal-selected-label">일정</h2></div>
+    <div class="list" id="cal-event-list"></div>
+  </section>
+
+  <!-- ============ GOALS ============ -->
+  <section class="view" id="view-goals" hidden>
+    <div class="app-title-row"><h1>목표</h1></div>
+    <div class="list" id="goal-list"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="view-settings" hidden>
+    <div class="app-title-row"><h1>설정</h1></div>
+
+    <div class="settings-group">
+      <h3>통계</h3>
+      <div class="stat-grid" id="stat-grid"></div>
+    </div>
+
+    <div class="settings-group">
+      <h3>화면 모드</h3>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">테마</div>
+          <div class="settings-desc">라이트 / 다크 / 시스템 설정 따르기</div>
+        </div>
+        <div class="segmented" id="theme-segmented" style="width:160px;">
+          <button data-theme="light">라이트</button>
+          <button data-theme="dark">다크</button>
+          <button data-theme="system">시스템</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>색상 테마</h3>
+      <div class="card">
+        <div class="color-swatches" id="accent-swatches"></div>
+        <div class="custom-color-row" id="custom-color-row">
+          <label for="custom-color-input" class="custom-color-swatch" id="custom-color-swatch">
+            <input type="color" id="custom-color-input" value="#5B5FEF">
+          </label>
+          <div class="custom-color-text">
+            <div class="settings-label">직접 지정</div>
+            <div class="settings-desc">원하는 색을 골라 나만의 테마를 만들어보세요</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>동작</h3>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">완료 항목 자동 숨김</div>
+          <div class="settings-desc">체크한 루틴/할 일을 목록에서 바로 숨겨요</div>
+        </div>
+        <div class="switch" id="toggle-autohide" data-key="autoHide"></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>데이터</h3>
+      <div class="settings-row">
+        <div class="settings-label">데이터 백업 (JSON)</div>
+        <button class="btn secondary" data-action="backup">내보내기</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">데이터 복원 (JSON)</div>
+        <button class="btn secondary" data-action="restore">가져오기</button>
+      </div>
+      <input type="file" id="restore-input" accept="application/json">
+    </div>
+
+    <div class="settings-group">
+      <h3>정보</h3>
+      <div class="settings-row"><div class="settings-desc">Life Dashboard · 나만의 생산성 앱 · 모든 데이터는 이 기기에만 저장됩니다.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB BAR ============ -->
+  <nav class="tabbar">
+    <div class="tabbar-inner">
+      <button class="tab-btn active" data-view="home">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L12 4l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>홈</span>
+      </button>
+      <button class="tab-btn" data-view="todos">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="2"/><path d="M8 12.5l2.5 2.5L16 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>할 일</span>
+      </button>
+      <button class="tab-btn" data-view="calendar">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>일정</span>
+      </button>
+      <button class="tab-btn" data-view="goals">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+        <span>목표</span>
+      </button>
+      <button class="tab-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5a1.7 1.7 0 000-3l1.1-1.9-2.1-2.1-1.9 1.1a1.7 1.7 0 00-3 0L12.5 3h-3l-1 2.6a1.7 1.7 0 00-3 0l-1.9-1.1-2.1 2.1L2.6 8.5a1.7 1.7 0 000 3L1.5 13.4l2.1 2.1 1.9-1.1a1.7 1.7 0 003 0l1 2.6h3l1-2.6a1.7 1.7 0 003 0l1.9 1.1 2.1-2.1-1.1-1.9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span>설정</span>
+      </button>
+    </div>
+  </nav>
+
+  <button class="fab" id="fab-add" aria-label="추가">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+  </button>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-sheet" id="modal-sheet">
+      <div class="modal-handle"></div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================================================================
+   Life Dashboard — App Script
+   구조 설계 노트 (향후 Flutter 이식 및 기능 확장 대비):
+   - 모든 사용자 데이터는 순수 JSON 직렬화 가능한 형태(Store.data)로만 관리한다.
+     => 동일한 스키마를 Flutter/SQLite/위젯 프로바이더에서도 그대로 재사용 가능.
+   - 기능 단위는 "모듈"로 분리한다 (Routines, Todos, Events, Goals, Settings).
+     새 모듈(뽀모도로, 물마시기, 가계부 등)을 추가할 때는
+     1) DEFAULT_DATA에 데이터 슬롯 추가
+     2) FEATURES 배열에 탭/카드 등록
+     3) render 함수 + 이벤트 핸들러만 추가하면 되는 구조.
+   - 화면(View) 전환은 단일 SPA 방식이며 각 view는 독립된 render 함수를 가진다.
+   ================================================================ */
+
+/* ---------------- Constants ---------------- */
+const STORAGE_KEY = "lifeDashboard.v1";
+const WEEKDAY_LABELS = ["일","월","화","수","목","금","토"];
+const ACCENT_PRESETS = [
+  {id:"indigo", h:243, label:"인디고"},
+  {id:"rose",   h:350, label:"로즈"},
+  {id:"teal",   h:170, label:"틸"},
+  {id:"amber",  h:32,  label:"앰버"},
+  {id:"violet", h:265, label:"바이올렛"},
+  {id:"blue",   h:210, label:"블루"},
+];
+
+// 향후 확장 기능 등록부 (현재는 표시용 placeholder, UI 훅만 마련)
+const FUTURE_FEATURES = [
+  "focusTimer","pomodoro","water","exercise","diet","reading",
+  "budget","aiSchedule","weather","memo","diary","habitAnalysis",
+  "recurringEvents","notifications","homeWidget"
+];
+
+/* ---------------- Default data schema ---------------- */
+function defaultData(){
+  return {
+    schemaVersion: 1,
+    routines: [
+      // {id, title, days:[0-6], order}
+    ],
+    routineLogs: {
+      // "YYYY-MM-DD": { [routineId]: true }
+    },
+    todos: [
+      // {id, title, priority:'high'|'mid'|'low', done, createdAt, completedAt, order}
+    ],
+    events: [
+      // {id, date:'YYYY-MM-DD', time:'HH:MM', title, memo}
+    ],
+    goals: [
+      // {id, title, note, startDate:'YYYY-MM-DD', endDate:'YYYY-MM-DD', routineIds:[routineId,...]}
+      // 진행률은 저장하지 않고, 연동된 루틴들의 기간 내 체크 기록을 바탕으로 매번 자동 계산한다 (goalStats 참고).
+    ],
+    settings: {
+      theme: "system",        // light | dark | system
+      accent: "indigo",       // 프리셋 id 또는 "custom"
+      customColor: "#5B5FEF", // accent === "custom"일 때 사용하는 사용자 지정 색상(hex)
+      autoHide: false
+    }
+  };
+}
+
+/* ---------------- Store (localStorage wrapper) ---------------- */
+const Store = {
+  data: null,
+  load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        this.data = Object.assign(defaultData(), parsed);
+        this.data.settings = Object.assign(defaultData().settings, parsed.settings || {});
+      } else {
+        this.data = defaultData();
+        this.seedSample();
+      }
+      this.migrateGoals();
+    } catch(e){
+      console.error("데이터 로드 실패, 초기값으로 대체합니다.", e);
+      this.data = defaultData();
+    }
+  },
+  // 이전 버전(수동 슬라이더 progress)의 목표 데이터를
+  // 기간(startDate/endDate) + 연동 루틴(routineIds) 구조로 보정한다.
+  migrateGoals(){
+    const fallbackStart = todayKey();
+    const fallbackEnd = dateKey(new Date(Date.now() + 29*86400000));
+    this.data.goals = (this.data.goals || []).map(g=>({
+      id: g.id,
+      title: g.title,
+      note: g.note || "",
+      startDate: g.startDate || fallbackStart,
+      endDate: g.endDate || fallbackEnd,
+      routineIds: Array.isArray(g.routineIds) ? g.routineIds : []
+    }));
+  },
+  save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+    } catch(e){
+      console.error("저장 실패", e);
+      showToast("저장에 실패했어요. 저장 공간을 확인해주세요.");
+    }
+  },
+  seedSample(){
+    // 첫 실행 시 사용자가 흐름을 바로 이해할 수 있도록 최소한의 예시 데이터 제공
+    const id = uid();
+    this.data.routines = [
+      {id: uid(), title:"물 한 잔 마시기", days:[0,1,2,3,4,5,6], order:0},
+      {id: uid(), title:"10분 스트레칭", days:[1,2,3,4,5], order:1},
+    ];
+    this.data.todos = [
+      {id: uid(), title:"오늘 할 일 추가해보기", priority:"mid", done:false, createdAt:Date.now(), completedAt:null, order:0}
+    ];
+  }
+};
+
+/* ---------------- Utilities ---------------- */
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function dateKey(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function todayKey(){ return dateKey(new Date()); }
+function parseKey(key){ const [y,m,d] = key.split("-").map(Number); return new Date(y, m-1, d); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+/* hex(#RRGGBB) -> {h,s,l} 변환 (커스텀 액센트 색상 계산용) */
+function hexToHsl(hex){
+  let r=0,g=0,b=0;
+  hex = hex.replace("#","");
+  if(hex.length===3){ r=parseInt(hex[0]+hex[0],16); g=parseInt(hex[1]+hex[1],16); b=parseInt(hex[2]+hex[2],16); }
+  else { r=parseInt(hex.slice(0,2),16); g=parseInt(hex.slice(2,4),16); b=parseInt(hex.slice(4,6),16); }
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0; const l=(max+min)/2;
+  const d = max-min;
+  if(d!==0){
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = ((g-b)/d + (g<b?6:0)); break;
+      case g: h = (b-r)/d + 2; break;
+      case b: h = (r-g)/d + 4; break;
+    }
+    h *= 60;
+  }
+  return { h: Math.round(h), s: Math.round(s*100), l: Math.round(l*100) };
+}
+
+function showToast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> el.classList.remove("show"), 2000);
+}
+
+/* ---------------- Theme ---------------- */
+const Theme = {
+  apply(){
+    const s = Store.data.settings;
+    let mode = s.theme;
+    if(mode === "system"){
+      mode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", mode);
+    const root = document.documentElement.style;
+
+    if(s.accent === "custom" && s.customColor){
+      const {h,l} = hexToHsl(s.customColor);
+      // 사용자가 고른 색을 그대로 메인 액센트로 쓰고, 밝기만 조절해 강조/배경 톤을 파생시킨다.
+      root.setProperty("--accent-h", h);
+      root.setProperty("--accent", s.customColor);
+      root.setProperty("--accent-strong", `hsl(${h} 70% ${clamp(l-10,18,50)}%)`);
+      root.setProperty("--accent-soft", mode==="dark" ? `hsla(${h},60%,45%,0.20)` : `hsl(${h} 80% 96%)`);
+      root.setProperty("--accent-shadow", `hsla(${h},70%,50%,${mode==='dark'?0.4:0.32})`);
+    } else {
+      const preset = ACCENT_PRESETS.find(p=>p.id===s.accent) || ACCENT_PRESETS[0];
+      // 프리셋으로 되돌아왔을 때 커스텀 색상용 인라인 오버라이드를 제거해 스타일시트의 기본 공식을 되살린다.
+      root.removeProperty("--accent"); root.removeProperty("--accent-strong");
+      root.removeProperty("--accent-soft"); root.removeProperty("--accent-shadow");
+      root.setProperty("--accent-h", preset.h);
+    }
+  }
+};
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{
+  if(Store.data.settings.theme === "system") Theme.apply();
+});
+
+/* ---------------- Navigation ---------------- */
+const Views = ["home","todos","calendar","goals","settings"];
+let currentView = "home";
+function goto(view){
+  currentView = view;
+  Views.forEach(v=>{
+    document.getElementById("view-"+v).hidden = (v!==view);
+  });
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.view===view);
+  });
+  document.getElementById("fab-add").style.display = (view==="settings") ? "none" : "flex";
+  renderCurrentView();
+}
+function renderCurrentView(){
+  if(currentView==="home") renderHome();
+  else if(currentView==="todos") renderTodos();
+  else if(currentView==="calendar") renderCalendar();
+  else if(currentView==="goals") renderGoals();
+  else if(currentView==="settings") renderSettings();
+}
+
+/* ---------------- Clock ---------------- */
+function tickClock(){
+  const now = new Date();
+  document.getElementById("home-weekday").textContent = WEEKDAY_LABELS[now.getDay()] + "요일";
+  document.getElementById("home-date").textContent = `${now.getMonth()+1}월 ${now.getDate()}일`;
+  document.getElementById("home-time").textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+}
+
+/* ================================================================
+   HOME VIEW
+   ================================================================ */
+function todaysRoutines(){
+  const dow = new Date().getDay();
+  return Store.data.routines.filter(r=>r.days.includes(dow)).sort((a,b)=>a.order-b.order);
+}
+function isRoutineDone(routineId, key){
+  const log = Store.data.routineLogs[key];
+  return !!(log && log[routineId]);
+}
+function setRoutineDone(routineId, key, val){
+  if(!Store.data.routineLogs[key]) Store.data.routineLogs[key] = {};
+  if(val) Store.data.routineLogs[key][routineId] = true;
+  else delete Store.data.routineLogs[key][routineId];
+}
+
+function renderHome(){
+  const key = todayKey();
+  const routines = todaysRoutines();
+  const doneRoutines = routines.filter(r=>isRoutineDone(r.id,key));
+  const todos = Store.data.todos.filter(t=>!t.done || t.completedAt);
+  const activeTodos = Store.data.todos.filter(t=>!t.done);
+  const doneTodosToday = Store.data.todos.filter(t=>t.done && t.completedAt && dateKey(new Date(t.completedAt))===key);
+
+  const totalUnits = routines.length + Store.data.todos.filter(t=>!t.done || (t.completedAt && dateKey(new Date(t.completedAt))===key)).length;
+  const doneUnits = doneRoutines.length + doneTodosToday.length;
+  const pct = totalUnits ? Math.round((doneUnits/totalUnits)*100) : 0;
+
+  const ring = document.getElementById("home-ring");
+  const circumference = 251.2;
+  ring.style.strokeDashoffset = circumference - (circumference*pct/100);
+  document.getElementById("home-ring-pct").textContent = pct+"%";
+  document.getElementById("home-ring-sub").textContent = `루틴 ${doneRoutines.length}/${routines.length} · 할 일 ${doneTodosToday.length}/${activeTodos.length+doneTodosToday.length}`;
+  document.getElementById("home-streak").textContent = `🔥 ${computeStreak()}일 연속`;
+
+  // 루틴 리스트
+  const rList = document.getElementById("home-routine-list");
+  rList.innerHTML = "";
+  if(routines.length===0){
+    rList.innerHTML = `<div class="empty-state">오늘 요일에 등록된 루틴이 없어요.<br>편집 버튼으로 루틴을 추가해보세요.</div>`;
+  } else {
+    let items = routines.slice();
+    if(Store.data.settings.autoHide) items = items.filter(r=>!isRoutineDone(r.id,key));
+    if(items.length===0){
+      rList.innerHTML = `<div class="empty-state">오늘 루틴을 모두 완료했어요! 🎉</div>`;
+    }
+    items.forEach(r=>{
+      rList.appendChild(buildRoutineRow(r, key));
+    });
+  }
+
+  // 할 일 (오늘 화면엔 미완료 상위 5개만)
+  const tList = document.getElementById("home-todo-list");
+  tList.innerHTML = "";
+  const homeTodos = Store.data.todos.filter(t=>!t.done).sort(sortByPriorityThenOrder).slice(0,5);
+  if(homeTodos.length===0){
+    tList.innerHTML = `<div class="empty-state">할 일이 없어요. 여유로운 하루네요 ☕</div>`;
+  } else {
+    homeTodos.forEach(t=> tList.appendChild(buildTodoRow(t)));
+  }
+
+  // 오늘 일정
+  const eList = document.getElementById("home-event-list");
+  eList.innerHTML = "";
+  const todayEvents = Store.data.events.filter(e=>e.date===key).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  if(todayEvents.length===0){
+    eList.innerHTML = `<div class="empty-state" style="background:none;border:none;">오늘 등록된 일정이 없어요.</div>`;
+  } else {
+    todayEvents.forEach(e=> eList.appendChild(buildEventRow(e)));
+  }
+}
+
+function buildRoutineRow(routine, key){
+  const row = document.createElement("div");
+  row.className = "item-row";
+  const done = isRoutineDone(routine.id, key);
+  row.innerHTML = `
+    <button class="checkbox ${done?'checked':''}" data-role="routine-check" data-id="${routine.id}">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="item-main">
+      <div class="item-title ${done?'done':''}">${escapeHtml(routine.title)}</div>
+    </div>`;
+  return row;
+}
+
+function sortByPriorityThenOrder(a,b){
+  const rank = {high:0, mid:1, low:2};
+  if(rank[a.priority]!==rank[b.priority]) return rank[a.priority]-rank[b.priority];
+  return a.order-b.order;
+}
+
+function buildTodoRow(todo){
+  const row = document.createElement("div");
+  row.className = "item-row";
+  const pClass = todo.priority==="high"?"priority-high":todo.priority==="mid"?"priority-mid":"priority-low";
+  row.innerHTML = `
+    <button class="checkbox ${todo.done?'checked':''}" data-role="todo-check" data-id="${todo.id}">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="item-main">
+      <div class="item-title ${todo.done?'done':''}">${escapeHtml(todo.title)}</div>
+      <div class="item-meta"><span class="priority-dot ${pClass}"></span>${priorityLabel(todo.priority)}</div>
+    </div>
+    <button class="icon-btn" data-role="todo-edit" data-id="${todo.id}">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>`;
+  return row;
+}
+function priorityLabel(p){ return p==="high"?"🔴 중요":p==="mid"?"🟡 보통":"🟢 여유"; }
+
+function buildEventRow(e){
+  const row = document.createElement("div");
+  row.className = "event-row";
+  row.innerHTML = `
+    <div class="event-time">${e.time||"종일"}</div>
+    <div style="flex:1;">
+      <div class="event-title">${escapeHtml(e.title)}</div>
+      ${e.memo?`<div class="event-memo">${escapeHtml(e.memo)}</div>`:""}
+    </div>
+    <button class="icon-btn" data-role="event-edit" data-id="${e.id}">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>`;
+  return row;
+}
+
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------------- Streak computation ---------------- */
+function computeStreak(){
+  // 연속 달성일: 그 날짜에 배정된 루틴이 있으면 전부 완료해야 성공,
+  // 배정된 루틴이 없으면 완료한 할 일이 1개 이상이면 성공으로 간주.
+  let streak = 0;
+  let cursor = new Date();
+  // 오늘이 아직 미완료 상태라도 스트릭 계산에서는 "어제까지"를 기준으로 하되,
+  // 오늘 이미 조건을 만족했다면 오늘도 포함한다.
+  for(let i=0;i<3650;i++){
+    const key = dateKey(cursor);
+    const dow = cursor.getDay();
+    const assigned = Store.data.routines.filter(r=>r.days.includes(dow));
+    const log = Store.data.routineLogs[key] || {};
+    const routineSuccess = assigned.length>0 ? assigned.every(r=>log[r.id]) : null;
+    const todoSuccessCount = Store.data.todos.filter(t=>t.done && t.completedAt && dateKey(new Date(t.completedAt))===key).length;
+
+    let success;
+    if(assigned.length>0){ success = routineSuccess; }
+    else { success = todoSuccessCount>0; }
+
+    if(i===0 && !success){
+      // 오늘 아직 미완료면 오늘은 세지 않고 어제부터 검사
+      cursor.setDate(cursor.getDate()-1);
+      continue;
+    }
+    if(!success) break;
+    streak++;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return streak;
+}
+
+/* ================================================================
+   TODOS VIEW
+   ================================================================ */
+let todoFilter = "all";
+function renderTodos(){
+  const list = document.getElementById("todo-list");
+  list.innerHTML = "";
+  let items = Store.data.todos.slice();
+  if(todoFilter==="active") items = items.filter(t=>!t.done);
+  else if(todoFilter==="done") items = items.filter(t=>t.done);
+
+  items.sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    return sortByPriorityThenOrder(a,b);
+  });
+
+  if(items.length===0){
+    list.innerHTML = `<div class="empty-state">표시할 할 일이 없어요.</div>`;
+    return;
+  }
+  items.forEach(t=> list.appendChild(buildTodoRow(t)));
+}
+
+/* ================================================================
+   CALENDAR VIEW
+   ================================================================ */
+let calCursor = new Date(); calCursor.setDate(1);
+let calSelectedKey = todayKey();
+
+function renderCalendar(){
+  document.getElementById("cal-month-label").textContent = `${calCursor.getFullYear()}년 ${calCursor.getMonth()+1}월`;
+
+  const dowRow = document.getElementById("cal-dow-row");
+  dowRow.innerHTML = WEEKDAY_LABELS.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = "";
+  const year = calCursor.getFullYear(), month = calCursor.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const tKey = todayKey();
+
+  const cells = [];
+  for(let i=firstDow-1;i>=0;i--) cells.push({d: daysInPrevMonth-i, muted:true, month: month-1});
+  for(let d=1; d<=daysInMonth; d++) cells.push({d, muted:false, month});
+  while(cells.length % 7 !== 0) cells.push({d: cells.length, muted:true, month: month+1});
+
+  cells.forEach(c=>{
+    const realDate = new Date(year, c.month, c.d);
+    const key = dateKey(realDate);
+    const cell = document.createElement("div");
+    cell.className = "cal-cell" + (c.muted?" muted":"") + (key===tKey?" today":"") + (key===calSelectedKey?" selected":"");
+    const hasEvents = Store.data.events.some(e=>e.date===key);
+    cell.innerHTML = `${realDate.getDate()}${hasEvents?'<span class="cal-dot"></span>':''}`;
+    cell.dataset.key = key;
+    cell.addEventListener("click", ()=>{ calSelectedKey = key; renderCalendar(); });
+    grid.appendChild(cell);
+  });
+
+  const selDate = parseKey(calSelectedKey);
+  document.getElementById("cal-selected-label").textContent = `${selDate.getMonth()+1}월 ${selDate.getDate()}일 일정`;
+  const list = document.getElementById("cal-event-list");
+  list.innerHTML = "";
+  const dayEvents = Store.data.events.filter(e=>e.date===calSelectedKey).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  if(dayEvents.length===0){
+    list.innerHTML = `<div class="empty-state">이 날짜엔 일정이 없어요.</div>`;
+  } else {
+    dayEvents.forEach(e=> list.appendChild(buildEventRow(e)));
+  }
+}
+
+/* ================================================================
+   GOALS VIEW
+   목표는 진행률을 직접 입력하지 않는다.
+   대신 "기간(startDate~endDate)" 동안 "연동된 루틴(routineIds, 하위 목표)"이
+   실제로 체크된 횟수를 세어 자동으로 진행률을 계산한다.
+   ================================================================ */
+
+// 목표 기간 내 루틴 하위목표 달성 통계 계산
+// total: 기간 전체에서 연동 루틴들이 수행되어야 했던 총 횟수 (요일 매칭 기준)
+// done : 그 중 오늘까지 실제로 체크된 횟수
+function goalStats(goal){
+  const routines = (goal.routineIds||[]).map(id=>Store.data.routines.find(r=>r.id===id)).filter(Boolean);
+  if(routines.length===0) return {done:0, total:0, pct:0};
+
+  const start = parseKey(goal.startDate);
+  const end = parseKey(goal.endDate);
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let total=0, done=0;
+  const cursor = new Date(start);
+  while(cursor <= end){
+    const dow = cursor.getDay();
+    const key = dateKey(cursor);
+    routines.forEach(r=>{
+      if(r.days.includes(dow)){
+        total++;
+        if(cursor <= today){
+          const log = Store.data.routineLogs[key];
+          if(log && log[r.id]) done++;
+        }
+      }
+    });
+    cursor.setDate(cursor.getDate()+1);
+  }
+  const pct = total ? clamp(Math.round(done/total*100),0,100) : 0;
+  return {done, total, pct};
+}
+
+function isGoalActiveToday(goal){
+  const key = todayKey();
+  return key >= goal.startDate && key <= goal.endDate;
+}
+
+function goalPeriodLabel(goal){
+  const s = parseKey(goal.startDate), e = parseKey(goal.endDate);
+  return `${s.getMonth()+1}.${s.getDate()} ~ ${e.getMonth()+1}.${e.getDate()}`;
+}
+
+function goalDdayLabel(goal){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = parseKey(goal.startDate);
+  const end = parseKey(goal.endDate);
+  if(today < start) return `시작 전 · D-${Math.ceil((start-today)/86400000)}`;
+  if(today > end) return "기간 종료";
+  const diff = Math.round((end-today)/86400000);
+  return diff===0 ? "오늘 마감" : `D-${diff}`;
+}
+
+function renderGoals(){
+  const list = document.getElementById("goal-list");
+  list.innerHTML = "";
+  if(Store.data.goals.length===0){
+    list.innerHTML = `<div class="empty-state">아직 등록된 목표가 없어요.<br>+ 버튼으로 첫 목표를 만들고, 목표 기간 동안 수행할 하위 목표(루틴)를 연동해보세요.</div>`;
+    return;
+  }
+  Store.data.goals.forEach(g=>{
+    const stats = goalStats(g);
+    const routines = (g.routineIds||[]).map(id=>Store.data.routines.find(r=>r.id===id)).filter(Boolean);
+    const card = document.createElement("div");
+    card.className = "card goal-card";
+    card.innerHTML = `
+      <div class="goal-top">
+        <div class="goal-name">${escapeHtml(g.title)}</div>
+        <div class="goal-pct">${stats.total ? stats.pct+"%" : "–"}</div>
+      </div>
+      <div class="goal-period">${goalPeriodLabel(g)} · ${goalDdayLabel(g)}</div>
+      ${g.note?`<div class="goal-note">${escapeHtml(g.note)}</div>`:""}
+      <div class="bar-track"><div class="bar-fill" style="width:${stats.pct}%"></div></div>
+      <div class="goal-sub">${stats.total ? `${stats.done}/${stats.total}회 달성` : "하위 목표(루틴)를 연동하면 진행률이 자동으로 계산돼요"}</div>
+      ${routines.length ? `<div class="goal-chip-row">${routines.map(r=>`<span class="mini-chip">${escapeHtml(r.title)}</span>`).join("")}</div>` : ""}
+      <div class="goal-controls">
+        <button class="icon-btn" data-role="goal-edit" data-id="${g.id}">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+      </div>`;
+
+    // 목표가 오늘 활성 기간이고, 오늘 요일에 해당하는 하위 목표(루틴)가 있으면
+    // 카드 안에서 바로 체크할 수 있도록 미니 체크리스트를 붙인다.
+    if(isGoalActiveToday(g)){
+      const dow = new Date().getDay();
+      const todaysSub = routines.filter(r=>r.days.includes(dow));
+      if(todaysSub.length){
+        const wrap = document.createElement("div");
+        wrap.className = "goal-today-list";
+        const label = document.createElement("div");
+        label.className = "goal-today-label";
+        label.textContent = "오늘 체크하기";
+        wrap.appendChild(label);
+        todaysSub.forEach(r=> wrap.appendChild(buildRoutineRow(r, todayKey())));
+        card.insertBefore(wrap, card.querySelector(".goal-controls"));
+      }
+    }
+    list.appendChild(card);
+  });
+}
+
+/* ================================================================
+   SETTINGS VIEW
+   ================================================================ */
+function renderSettings(){
+  // 통계
+  const stats = computeStats();
+  document.getElementById("stat-grid").innerHTML = `
+    <div class="stat-box"><div class="num">${stats.today.routineRate}%</div><div class="lbl">오늘 루틴</div></div>
+    <div class="stat-box"><div class="num">${stats.week.doneTodos}</div><div class="lbl">이번주 완료</div></div>
+    <div class="stat-box"><div class="num">${computeStreak()}일</div><div class="lbl">연속 달성</div></div>
+  `;
+
+  // 테마 세그먼트
+  document.querySelectorAll("#theme-segmented button").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.theme===Store.data.settings.theme);
+  });
+
+  // 액센트 스와치
+  const sw = document.getElementById("accent-swatches");
+  sw.innerHTML = "";
+  ACCENT_PRESETS.forEach(p=>{
+    const b = document.createElement("button");
+    b.className = "swatch" + (Store.data.settings.accent===p.id?" active":"");
+    b.style.background = `hsl(${p.h} 75% 60%)`;
+    b.title = p.label;
+    b.addEventListener("click", ()=>{
+      Store.data.settings.accent = p.id; Store.save(); Theme.apply(); renderSettings();
+    });
+    sw.appendChild(b);
+  });
+
+  // 커스텀 색상 피커
+  const customSwatch = document.getElementById("custom-color-swatch");
+  const customInput = document.getElementById("custom-color-input");
+  const isCustom = Store.data.settings.accent === "custom";
+  customSwatch.classList.toggle("active", isCustom);
+  customSwatch.style.setProperty("--picked-color", Store.data.settings.customColor);
+  customInput.value = Store.data.settings.customColor;
+
+  document.getElementById("toggle-autohide").classList.toggle("on", Store.data.settings.autoHide);
+}
+
+function computeStats(){
+  const key = todayKey();
+  const now = new Date();
+  const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  function inRange(ts, start){ return ts >= start.setHours(0,0,0,0); }
+
+  const todaysR = todaysRoutines();
+  const doneToday = todaysR.filter(r=>isRoutineDone(r.id,key));
+  const routineRate = todaysR.length ? Math.round(doneToday.length/todaysR.length*100) : 0;
+
+  const weekDoneTodos = Store.data.todos.filter(t=>t.done && t.completedAt && new Date(t.completedAt) >= startOfWeek).length;
+  const monthDoneTodos = Store.data.todos.filter(t=>t.done && t.completedAt && new Date(t.completedAt) >= startOfMonth).length;
+
+  return {
+    today: {routineRate, doneTodos: doneToday.length},
+    week: {doneTodos: weekDoneTodos},
+    month: {doneTodos: monthDoneTodos}
+  };
+}
+
+/* ================================================================
+   MODAL SYSTEM
+   ================================================================ */
+const overlay = document.getElementById("modal-overlay");
+const modalContent = document.getElementById("modal-content");
+function openModal(html){
+  modalContent.innerHTML = html;
+  overlay.classList.add("open");
+}
+function closeModal(){
+  overlay.classList.remove("open");
+}
+overlay.addEventListener("click", (e)=>{ if(e.target===overlay) closeModal(); });
+
+/* ---------------- Add Todo Modal ---------------- */
+function openTodoModal(existing){
+  const isEdit = !!existing;
+  openModal(`
+    <div class="modal-title">${isEdit?"할 일 수정":"새 할 일"}</div>
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="f-todo-title" placeholder="예: 보고서 초안 작성" value="${isEdit?escapeHtml(existing.title):""}">
+    </div>
+    <div class="field">
+      <label>우선순위</label>
+      <div class="segmented" id="f-todo-priority">
+        <button data-v="high" class="${(!isEdit||existing.priority==='high')?'':''}">🔴 중요</button>
+        <button data-v="mid">🟡 보통</button>
+        <button data-v="low">🟢 여유</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      ${isEdit?'<button class="btn danger" id="f-todo-delete">삭제</button>':''}
+      <button class="btn block" id="f-todo-save">저장</button>
+    </div>
+  `);
+  const priority = isEdit ? existing.priority : "mid";
+  const segBtns = modalContent.querySelectorAll("#f-todo-priority button");
+  segBtns.forEach(b=>{
+    b.classList.toggle("active", b.dataset.v===priority);
+    b.addEventListener("click", ()=>{ segBtns.forEach(x=>x.classList.remove("active")); b.classList.add("active"); });
+  });
+  document.getElementById("f-todo-save").addEventListener("click", ()=>{
+    const title = document.getElementById("f-todo-title").value.trim();
+    if(!title){ showToast("제목을 입력해주세요."); return; }
+    const p = modalContent.querySelector("#f-todo-priority button.active")?.dataset.v || "mid";
+    if(isEdit){
+      existing.title = title; existing.priority = p;
+    } else {
+      Store.data.todos.push({id: uid(), title, priority:p, done:false, createdAt: Date.now(), completedAt:null, order: Store.data.todos.length});
+    }
+    Store.save(); closeModal(); renderCurrentView(); showToast(isEdit?"수정했어요":"할 일을 추가했어요");
+  });
+  if(isEdit){
+    document.getElementById("f-todo-delete").addEventListener("click", ()=>{
+      Store.data.todos = Store.data.todos.filter(t=>t.id!==existing.id);
+      Store.save(); closeModal(); renderCurrentView(); showToast("삭제했어요");
+    });
+  }
+}
+
+/* ---------------- Event Modal ---------------- */
+function openEventModal(existing){
+  const isEdit = !!existing;
+  const defDate = existing ? existing.date : calSelectedKey;
+  openModal(`
+    <div class="modal-title">${isEdit?"일정 수정":"새 일정"}</div>
+    <div class="field"><label>제목</label><input type="text" id="f-ev-title" placeholder="예: 팀 미팅" value="${isEdit?escapeHtml(existing.title):""}"></div>
+    <div class="field"><label>날짜</label><input type="date" id="f-ev-date" value="${defDate}"></div>
+    <div class="field"><label>시간 (선택)</label><input type="time" id="f-ev-time" value="${isEdit&&existing.time?existing.time:""}"></div>
+    <div class="field"><label>메모</label><textarea id="f-ev-memo" placeholder="메모를 남겨보세요">${isEdit&&existing.memo?escapeHtml(existing.memo):""}</textarea></div>
+    <div class="modal-actions">
+      ${isEdit?'<button class="btn danger" id="f-ev-delete">삭제</button>':''}
+      <button class="btn block" id="f-ev-save">저장</button>
+    </div>
+  `);
+  document.getElementById("f-ev-save").addEventListener("click", ()=>{
+    const title = document.getElementById("f-ev-title").value.trim();
+    const date = document.getElementById("f-ev-date").value;
+    const time = document.getElementById("f-ev-time").value;
+    const memo = document.getElementById("f-ev-memo").value.trim();
+    if(!title || !date){ showToast("제목과 날짜는 필수예요."); return; }
+    if(isEdit){
+      Object.assign(existing, {title, date, time, memo});
+    } else {
+      Store.data.events.push({id: uid(), title, date, time, memo});
+    }
+    Store.save(); closeModal(); calSelectedKey = date; renderCurrentView(); showToast(isEdit?"수정했어요":"일정을 추가했어요");
+  });
+  if(isEdit){
+    document.getElementById("f-ev-delete").addEventListener("click", ()=>{
+      Store.data.events = Store.data.events.filter(e=>e.id!==existing.id);
+      Store.save(); closeModal(); renderCurrentView(); showToast("삭제했어요");
+    });
+  }
+}
+
+/* ---------------- Goal Modal ----------------
+   목표 편집창은 저장 전까지 로컬 state 객체로 입력값을 들고 있다가,
+   하위 목표(루틴) 체크/추가처럼 목록을 다시 그려야 하는 상호작용이 생기면
+   state를 기준으로 모달 내용을 다시 렌더링한다. (입력 중이던 텍스트가 날아가지 않도록
+   재렌더링 직전에 항상 captureGoalFormValues로 현재 입력값을 state에 저장한다) */
+function openGoalModal(existing){
+  const isEdit = !!existing;
+  const state = {
+    title: isEdit ? existing.title : "",
+    note: isEdit ? existing.note : "",
+    startDate: isEdit ? existing.startDate : todayKey(),
+    endDate: isEdit ? existing.endDate : dateKey(new Date(Date.now() + 29*86400000)),
+    routineIds: isEdit ? (existing.routineIds||[]).slice() : []
+  };
+  renderGoalModal(state, existing);
+}
+
+function captureGoalFormValues(state){
+  const t = document.getElementById("f-goal-title"); if(t) state.title = t.value;
+  const n = document.getElementById("f-goal-note"); if(n) state.note = n.value;
+  const s = document.getElementById("f-goal-start"); if(s) state.startDate = s.value;
+  const e = document.getElementById("f-goal-end"); if(e) state.endDate = e.value;
+}
+
+function renderGoalModal(state, existing){
+  const isEdit = !!existing;
+  const linkedSet = new Set(state.routineIds);
+  const routineRows = Store.data.routines.length ? Store.data.routines.map(r=>`
+    <label class="link-check-row">
+      <input type="checkbox" data-role="goal-link-routine" data-id="${r.id}" ${linkedSet.has(r.id)?"checked":""}>
+      <span>${escapeHtml(r.title)}</span>
+      <span class="item-meta">${r.days.length===7 ? "매일" : r.days.map(d=>WEEKDAY_LABELS[d]).join(",")}</span>
+    </label>`).join("") : `<div class="empty-state" style="padding:16px;">등록된 루틴이 없어요. 아래에서 새로 만들어보세요.</div>`;
+
+  openModal(`
+    <div class="modal-title">${isEdit?"목표 수정":"새 목표"}</div>
+    <div class="field"><label>목표 이름</label><input type="text" id="f-goal-title" placeholder="예: 5kg 감량" value="${escapeHtml(state.title)}"></div>
+    <div class="field"><label>메모 (선택)</label><input type="text" id="f-goal-note" placeholder="예: 여름 전까지 감량" value="${escapeHtml(state.note)}"></div>
+    <div class="field" style="display:flex; gap:10px;">
+      <div style="flex:1;"><label>시작일</label><input type="date" id="f-goal-start" value="${state.startDate}"></div>
+      <div style="flex:1;"><label>종료일</label><input type="date" id="f-goal-end" value="${state.endDate}"></div>
+    </div>
+    <div class="field">
+      <label>하위 목표 (기간 동안 수행할 루틴 연동)</label>
+      <div class="card" style="padding:2px 6px;">${routineRows}</div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <input type="text" id="f-goal-new-routine" placeholder="새 하위 목표 이름 (예: 유산소 30분)" style="flex:1; padding:11px 13px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface-2); font-size:14px;">
+        <button class="btn secondary" id="f-goal-add-routine">추가</button>
+      </div>
+      <div class="settings-desc" style="margin-top:6px;">새로 추가한 하위 목표는 매일 반복으로 등록돼요. 요일은 루틴 관리에서 조정할 수 있어요.</div>
+    </div>
+    <div class="modal-actions">
+      ${isEdit?'<button class="btn danger" id="f-goal-delete">삭제</button>':''}
+      <button class="btn block" id="f-goal-save">저장</button>
+    </div>
+  `);
+
+  modalContent.querySelectorAll('[data-role="goal-link-routine"]').forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      captureGoalFormValues(state);
+      if(cb.checked) state.routineIds.push(cb.dataset.id);
+      else state.routineIds = state.routineIds.filter(id=>id!==cb.dataset.id);
+      renderGoalModal(state, existing);
+    });
+  });
+
+  document.getElementById("f-goal-add-routine").addEventListener("click", ()=>{
+    captureGoalFormValues(state);
+    const input = document.getElementById("f-goal-new-routine");
+    const title = input.value.trim();
+    if(!title){ showToast("하위 목표 이름을 입력해주세요."); return; }
+    const newRoutine = {id: uid(), title, days:[0,1,2,3,4,5,6], order: Store.data.routines.length};
+    Store.data.routines.push(newRoutine);
+    Store.save();
+    state.routineIds.push(newRoutine.id);
+    renderGoalModal(state, existing);
+    showToast("하위 목표를 추가하고 연동했어요");
+  });
+
+  document.getElementById("f-goal-save").addEventListener("click", ()=>{
+    captureGoalFormValues(state);
+    const title = state.title.trim();
+    if(!title){ showToast("목표 이름을 입력해주세요."); return; }
+    if(!state.startDate || !state.endDate){ showToast("시작일과 종료일을 선택해주세요."); return; }
+    if(state.startDate > state.endDate){ showToast("종료일은 시작일 이후로 설정해주세요."); return; }
+    const payload = {
+      title, note: state.note.trim(),
+      startDate: state.startDate, endDate: state.endDate,
+      routineIds: state.routineIds
+    };
+    if(isEdit){ Object.assign(existing, payload); }
+    else { Store.data.goals.push(Object.assign({id: uid()}, payload)); }
+    Store.save(); closeModal(); renderCurrentView(); showToast(isEdit?"수정했어요":"목표를 추가했어요");
+  });
+
+  if(isEdit){
+    document.getElementById("f-goal-delete").addEventListener("click", ()=>{
+      Store.data.goals = Store.data.goals.filter(g=>g.id!==existing.id);
+      Store.save(); closeModal(); renderCurrentView(); showToast("삭제했어요");
+    });
+  }
+}
+
+/* ---------------- Routine Manage Modal ---------------- */
+function openRoutineManageModal(){
+  renderRoutineManageModal();
+}
+function renderRoutineManageModal(){
+  const rows = Store.data.routines.map(r=>`
+    <div class="item-row" style="margin-bottom:8px;">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(r.title)}</div>
+        <div class="item-meta">${r.days.map(d=>WEEKDAY_LABELS[d]).join(", ")}</div>
+      </div>
+      <button class="icon-btn" data-role="routine-edit" data-id="${r.id}">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" data-role="routine-delete" data-id="${r.id}">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>`).join("");
+  openModal(`
+    <div class="modal-title">루틴 관리</div>
+    <div id="routine-manage-list">${rows || '<div class="empty-state">등록된 루틴이 없어요.</div>'}</div>
+    <button class="btn block secondary" id="routine-add-new" style="margin-top:14px;">+ 새 루틴 추가</button>
+  `);
+  modalContent.querySelectorAll('[data-role="routine-edit"]').forEach(btn=>{
+    btn.addEventListener("click", ()=> openRoutineEditModal(Store.data.routines.find(r=>r.id===btn.dataset.id)));
+  });
+  modalContent.querySelectorAll('[data-role="routine-delete"]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      Store.data.routines = Store.data.routines.filter(r=>r.id!==btn.dataset.id);
+      Store.save(); renderRoutineManageModal(); renderCurrentView();
+    });
+  });
+  document.getElementById("routine-add-new").addEventListener("click", ()=> openRoutineEditModal(null));
+}
+function openRoutineEditModal(existing){
+  const isEdit = !!existing;
+  const selectedDays = isEdit ? existing.days.slice() : [new Date().getDay()];
+  openModal(`
+    <div class="modal-title">${isEdit?"루틴 수정":"새 루틴"}</div>
+    <div class="field"><label>루틴 이름</label><input type="text" id="f-r-title" placeholder="예: 운동하기" value="${isEdit?escapeHtml(existing.title):""}"></div>
+    <div class="field">
+      <label>반복 요일</label>
+      <div class="weekday-picker" id="f-r-days">
+        ${WEEKDAY_LABELS.map((l,i)=>`<button data-d="${i}" class="${selectedDays.includes(i)?'active':''}">${l}</button>`).join("")}
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn block" id="f-r-save">저장</button>
+    </div>
+  `);
+  modalContent.querySelectorAll("#f-r-days button").forEach(b=>{
+    b.addEventListener("click", ()=> b.classList.toggle("active"));
+  });
+  document.getElementById("f-r-save").addEventListener("click", ()=>{
+    const title = document.getElementById("f-r-title").value.trim();
+    const days = Array.from(modalContent.querySelectorAll("#f-r-days button.active")).map(b=>Number(b.dataset.d));
+    if(!title){ showToast("루틴 이름을 입력해주세요."); return; }
+    if(days.length===0){ showToast("요일을 1개 이상 선택해주세요."); return; }
+    if(isEdit){ existing.title = title; existing.days = days; }
+    else { Store.data.routines.push({id: uid(), title, days, order: Store.data.routines.length}); }
+    Store.save(); openRoutineManageModal(); renderCurrentView(); showToast("루틴을 저장했어요");
+  });
+}
+
+/* ================================================================
+   GLOBAL EVENT DELEGATION
+   ================================================================ */
+document.addEventListener("click", (e)=>{
+  const check = e.target.closest('[data-role="routine-check"]');
+  if(check){
+    const key = todayKey();
+    const id = check.dataset.id;
+    const row = check.closest(".item-row");
+    const willBeDone = !isRoutineDone(id, key);
+    setRoutineDone(id, key, willBeDone);
+    Store.save();
+    if(willBeDone && row){
+      row.classList.add("completing");
+      setTimeout(()=>{
+        if(Store.data.settings.autoHide){
+          row.classList.add("fading-out");
+          setTimeout(()=> renderCurrentView(), 260);
+        } else {
+          renderCurrentView();
+        }
+      }, 260);
+    } else {
+      renderCurrentView();
+    }
+    return;
+  }
+
+  const todoCheck = e.target.closest('[data-role="todo-check"]');
+  if(todoCheck){
+    const id = todoCheck.dataset.id;
+    const todo = Store.data.todos.find(t=>t.id===id);
+    if(todo){
+      todo.done = !todo.done;
+      todo.completedAt = todo.done ? Date.now() : null;
+      Store.save();
+      const row = todoCheck.closest(".item-row");
+      if(todo.done && row){
+        row.classList.add("completing");
+        setTimeout(()=>{
+          if(Store.data.settings.autoHide){
+            row.classList.add("fading-out");
+            setTimeout(()=> renderCurrentView(), 260);
+          } else { renderCurrentView(); }
+        }, 260);
+      } else { renderCurrentView(); }
+    }
+    return;
+  }
+
+  const todoEdit = e.target.closest('[data-role="todo-edit"]');
+  if(todoEdit){ openTodoModal(Store.data.todos.find(t=>t.id===todoEdit.dataset.id)); return; }
+
+  const eventEdit = e.target.closest('[data-role="event-edit"]');
+  if(eventEdit){ openEventModal(Store.data.events.find(ev=>ev.id===eventEdit.dataset.id)); return; }
+
+  const goalEdit = e.target.closest('[data-role="goal-edit"]');
+  if(goalEdit){ openGoalModal(Store.data.goals.find(g=>g.id===goalEdit.dataset.id)); return; }
+
+  const tabBtn = e.target.closest(".tab-btn");
+  if(tabBtn){ goto(tabBtn.dataset.view); return; }
+
+  const actionEl = e.target.closest("[data-action]");
+  if(actionEl){
+    const action = actionEl.dataset.action;
+    if(action==="goto-todos") goto("todos");
+    else if(action==="goto-calendar") goto("calendar");
+    else if(action==="open-routine-manage") openRoutineManageModal();
+    else if(action==="cal-prev"){ calCursor.setMonth(calCursor.getMonth()-1); renderCalendar(); }
+    else if(action==="cal-next"){ calCursor.setMonth(calCursor.getMonth()+1); renderCalendar(); }
+    else if(action==="backup") doBackup();
+    else if(action==="restore") document.getElementById("restore-input").click();
+    return;
+  }
+
+  const filterTab = e.target.closest(".pill-tab");
+  if(filterTab && filterTab.closest("#todo-filter-tabs")){
+    todoFilter = filterTab.dataset.filter;
+    document.querySelectorAll("#todo-filter-tabs .pill-tab").forEach(b=>b.classList.toggle("active", b===filterTab));
+    renderTodos();
+    return;
+  }
+
+  const themeSeg = e.target.closest("#theme-segmented button");
+  if(themeSeg){
+    Store.data.settings.theme = themeSeg.dataset.theme;
+    Store.save(); Theme.apply(); renderSettings();
+    return;
+  }
+
+  const autohideToggle = e.target.closest("#toggle-autohide");
+  if(autohideToggle){
+    Store.data.settings.autoHide = !Store.data.settings.autoHide;
+    Store.save(); renderSettings();
+    return;
+  }
+});
+
+document.addEventListener("input", (e)=>{
+  if(e.target.id === "custom-color-input"){
+    Store.data.settings.accent = "custom";
+    Store.data.settings.customColor = e.target.value;
+    Store.save();
+    Theme.apply();
+    renderSettings();
+    return;
+  }
+});
+
+document.getElementById("fab-add").addEventListener("click", ()=>{
+  if(currentView==="todos") openTodoModal(null);
+  else if(currentView==="calendar") openEventModal(null);
+  else if(currentView==="goals") openGoalModal(null);
+  else openTodoModal(null);
+});
+
+/* ================================================================
+   BACKUP / RESTORE
+   ================================================================ */
+function doBackup(){
+  const blob = new Blob([JSON.stringify(Store.data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = todayKey();
+  a.href = url; a.download = `life-dashboard-backup-${stamp}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("백업 파일을 저장했어요");
+}
+document.getElementById("restore-input").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed || typeof parsed !== "object") throw new Error("invalid");
+      Store.data = Object.assign(defaultData(), parsed);
+      Store.data.settings = Object.assign(defaultData().settings, parsed.settings||{});
+      Store.migrateGoals();
+      Store.save();
+      Theme.apply();
+      renderCurrentView();
+      showToast("데이터를 복원했어요");
+    } catch(err){
+      showToast("올바르지 않은 백업 파일이에요");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function init(){
+  Store.load();
+  Theme.apply();
+  tickClock();
+  setInterval(tickClock, 1000*10);
+  goto("home");
+}
+document.addEventListener("DOMContentLoaded", init);
+
+})();
+</script>
+</body>
+</html>
